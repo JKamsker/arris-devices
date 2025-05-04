@@ -1,0 +1,17 @@
+# Ignore node_modules (already handled by npm install in Dockerfile)
+node_modules
+src/node_modules
+
+# Ignore the session cache file from the build context
+src/.session_cache.json
+
+# Ignore Git directory
+.git
+
+# Ignore IDE/OS specific files
+.vscode
+*.swp
+*~
+.DS_Store
+# Environment variables file
+.env

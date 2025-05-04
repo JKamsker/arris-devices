@@ -1,0 +1,37 @@
+{
+  "csrfToken": "8bda66339a9667fdf5f5692a7ce1392a",
+  "derivedKeyHex": "0b3918a72466eaecbdc5fa621c46c8a9",
+  "sessionIv": "7b2dc54f5e89d839",
+  "cookieJarJson": {
+    "version": "tough-cookie@5.1.2",
+    "storeType": "MemoryCookieStore",
+    "rejectPublicSuffixes": true,
+    "enableLooseMode": false,
+    "allowSpecialUseDomain": true,
+    "prefixSecurity": "silent",
+    "cookies": [
+      {
+        "key": "PHPSESSID",
+        "value": "70f589a189033a8ff5537798cd079d64",
+        "domain": "10.0.0.1",
+        "path": "/",
+        "hostOnly": true,
+        "creation": "2025-05-04T13:03:23.249Z",
+        "lastAccessed": "2025-05-04T13:03:25.972Z"
+      },
+      {
+        "key": "LastBootTime",
+        "value": "1746289443",
+        "expires": "2026-05-04T13:03:23.000Z",
+        "maxAge": 31536000,
+        "domain": "10.0.0.1",
+        "path": "/",
+        "httpOnly": true,
+        "hostOnly": true,
+        "creation": "2025-05-04T13:03:23.480Z",
+        "lastAccessed": "2025-05-04T13:03:23.483Z"
+      }
+    ]
+  },
+  "timestamp": 1746363805974
+}

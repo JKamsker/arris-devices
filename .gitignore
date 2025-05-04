@@ -1,1 +1,6 @@
-src/node_modules/
+node_modules
+src/.session_cache.json
+
+
+# Environment variables file
+.env
