@@ -10,7 +10,7 @@ If you just want to run the script without building it yourself, you can use the
 docker run --rm jkamsker/arris-devices:main --url "http://10.0.0.1" --user "admin" --pass "YOUR_PASSWORD" --quiet
 ```
 
-With [.env](#configuration-environment-variables) file:
+With [.env](#configuration-environment-variables-sample) file:
 ```bash
 docker run --rm --env-file .env jkamsker/arris-devices:main --quiet
 ```
@@ -35,7 +35,6 @@ The script can be configured using a `.env` file in the project root, environmen
 | Cache Directory | `--cache-dir`   | `SESSION_CACHE_DIR`               | `/app/cache` (Volume)  | Directory to store the `.session_cache.json`.    |
 | Quiet Mode      | `--quiet` / `-q`| N/A                               | `false`                | Suppress informational logs, output only JSON.   |
 
-<a id="configuration-environment-variables"></a>
 **`.env` File:**
 
 A sample configuration file `.env.sample` is provided in the project root. To use it:
@@ -51,6 +50,8 @@ A sample configuration file `.env.sample` is provided in the project root. To us
     ```
 2.  Edit the new `.env` file and replace the placeholder values with your actual router credentials and URL.
 
+
+<a id="configuration-environment-variables-sample"></a>
 Example `.env` content:
 ```dotenv
 ROUTER_URL=http://10.0.0.1
