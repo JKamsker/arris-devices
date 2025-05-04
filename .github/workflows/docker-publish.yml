@@ -16,6 +16,20 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      
+    - name: Get Secrets
+      uses: bitwarden/sm-action@v2
+      with:
+        access_token: ${{ secrets.BW_ACCESS_TOKEN }}
+        base_url: https://vault.bitwarden.eu
+        secrets: |
+          c82b4e64-e4b2-4853-9085-b2d301017484 > DOCKER_API_KEY
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ github.actor }}
+        password: ${{ env.DOCKER_API_KEY }}
 
     - name: Log in to the GitHub Container Registry
       uses: docker/login-action@v3
@@ -28,7 +42,9 @@ jobs:
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository }} # ghcr.io/OWNER/REPO
+        images: |
+          ${{ github.actor }}/${{ github.event.repository.name }}
+          ghcr.io/${{ github.repository }}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
