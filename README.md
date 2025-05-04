@@ -7,9 +7,15 @@ This script connects to an Arris router (like the TG3442DE), logs in, and fetche
 If you just want to run the script without building it yourself, you can use the pre-built image from GitHub Container Registry (Replace YOUR_PASSWORD with your actual router password):
 
 ```bash
-docker run --rm ghcr.io/jkamsker/arris-devices:main --url "http://10.0.0.1" --user "admin" --pass "YOUR_PASSWORD"
+docker run --rm jkamsker/arris-devices:main --url "http://10.0.0.1" --user "admin" --pass "YOUR_PASSWORD" --quiet
 ```
-*(This uses the default router URL and admin username. Cache will be stored in an anonymous Docker volume.)*
+
+With [.env](#configuration-environment-variables) file:
+```bash
+docker run --rm --env-file .env jkamsker/arris-devices:main --quiet
+```
+
+
 ## Configuration
 
 The script can be configured using a `.env` file in the project root, environment variables, or command-line arguments. The order of precedence is:
@@ -29,6 +35,7 @@ The script can be configured using a `.env` file in the project root, environmen
 | Cache Directory | `--cache-dir`   | `SESSION_CACHE_DIR`               | `/app/cache` (Volume)  | Directory to store the `.session_cache.json`.    |
 | Quiet Mode      | `--quiet` / `-q`| N/A                               | `false`                | Suppress informational logs, output only JSON.   |
 
+<a id="configuration-environment-variables"></a>
 **`.env` File:**
 
 A sample configuration file `.env.sample` is provided in the project root. To use it:
