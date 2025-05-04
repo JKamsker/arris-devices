@@ -29,6 +29,32 @@ function getArgValue(key) {
   return undefined; // Or handle cases where flag is present but value is missing
 }
 
+// Helper function to check for flags (like --quiet or -q)
+function hasArgFlag(key, shortKey) {
+    return argv.includes(key) || (shortKey && argv.includes(shortKey));
+}
+
+// --- Logging Control ---
+const isQuiet = hasArgFlag('--quiet', '-q');
+
+// Conditional logger for informational messages
+const logInfo = (...args) => {
+    if (!isQuiet) {
+        console.log(...args);
+    }
+};
+
+// Logger for errors (always prints to stderr)
+const logError = (...args) => {
+    console.error(...args);
+};
+
+// Logger for the final result (always prints to stdout)
+const logResult = (...args) => {
+    console.log(...args);
+};
+
+
 // Router Credentials (Args > Env > Defaults)
 const argUser = getArgValue('--user');
 const argPass = getArgValue('--pass');
@@ -38,9 +64,9 @@ const routerUser = argUser || envUser; // Default user
 const routerPassword = argPass || envPass; // Default password (consider removing default for security)
 
 if (!routerUser || !routerPassword) {
-  console.error("Router username and password must be provided either as command line arguments or environment variables.");
+  logError("Router username and password must be provided either as command line arguments or environment variables.");
   process.exit(1);
-  return; 
+  return;
 }
 
 
@@ -62,7 +88,7 @@ const cacheFilePath = path.resolve(cacheDir, cacheFileName); // Use resolve for 
   try {
     await fs.mkdir(path.dirname(cacheFilePath), { recursive: true });
   } catch (err) {
-    console.error(`Error creating cache directory ${path.dirname(cacheFilePath)}:`, err);
+    logError(`Error creating cache directory ${path.dirname(cacheFilePath)}:`, err);
     process.exit(1);
   }
 })();
@@ -149,9 +175,9 @@ async function saveSessionCache(csrfToken, derivedKey, sessionIv, currentJar) {
       timestamp: Date.now(), // Add timestamp for potential expiry logic later
     };
     await fs.writeFile(cacheFilePath, JSON.stringify(cacheData, null, 2)); // Use dynamic path
-    console.log(`Session data cached successfully to ${cacheFilePath}.`);
+    logInfo(`Session data cached successfully to ${cacheFilePath}.`);
   } catch (error) {
-    console.error("Error saving session cache:", error.message);
+    logError("Error saving session cache:", error.message);
     // Don't exit, just log the error
   }
 }
@@ -167,7 +193,7 @@ async function loadSessionCache() {
 
     // Basic validation
     if (!cacheData.csrfToken || !cacheData.derivedKeyHex || !cacheData.sessionIv || !cacheData.cookieJarJson) {
-      console.log("Cache file is incomplete. Ignoring cache.");
+      logInfo("Cache file is incomplete. Ignoring cache.");
       await clearSessionCache(); // Clear invalid cache
       return null;
     }
@@ -175,7 +201,7 @@ async function loadSessionCache() {
     // Optional: Add expiry check based on timestamp if needed
     // const cacheAge = Date.now() - cacheData.timestamp;
     // if (cacheAge > SOME_EXPIRY_TIME) {
-    //     console.log("Cache expired. Ignoring cache.");
+    //     logInfo("Cache expired. Ignoring cache.");
     //     await clearSessionCache();
     //     return null;
     // }
@@ -183,7 +209,7 @@ async function loadSessionCache() {
     const derivedKey = sjcl.codec.hex.toBits(cacheData.derivedKeyHex); // Convert hex back to BitArray
     const loadedJar = CookieJar.fromJSON(cacheData.cookieJarJson); // Deserialize jar
 
-    console.log("Session data loaded from cache.");
+    logInfo("Session data loaded from cache.");
     return {
       csrfToken: cacheData.csrfToken,
       derivedKey,
@@ -192,9 +218,9 @@ async function loadSessionCache() {
     };
   } catch (error) {
     if (error.code === "ENOENT") {
-      console.log("Cache file not found. Will perform login.");
+      logInfo("Cache file not found. Will perform login.");
     } else {
-      console.error("Error loading session cache:", error.message);
+      logError("Error loading session cache:", error.message);
       // Attempt to clear potentially corrupt cache
       await clearSessionCache();
     }
@@ -207,12 +233,12 @@ async function loadSessionCache() {
  */
 async function clearSessionCache() {
     try {
-        await fs.unlink(cacheFilePath); // Use dynamic path
-        console.log(`Session cache cleared (${cacheFilePath}).`);
+      await fs.unlink(cacheFilePath); // Use dynamic path
+      logInfo(`Session cache cleared (${cacheFilePath}).`);
     } catch (error) {
-        if (error.code !== 'ENOENT') { // Ignore if file doesn't exist
-            console.error("Error clearing session cache:", error.message);
-        }
+      if (error.code !== 'ENOENT') { // Ignore if file doesn't exist
+        logError("Error clearing session cache:", error.message);
+      }
     }
 }
 
@@ -228,17 +254,17 @@ function extractLoginCryptoParams(htmlContent) {
 }
 
 async function login() {
-  console.log("Attempting login...");
+  logInfo("Attempting login...");
   let dynamicSalt, dynamicIv, loginKey;
   try {
-    console.log(`Fetching login page (${LOGIN_PAGE_URL})...`);
+    logInfo(`Fetching login page (${LOGIN_PAGE_URL})...`);
     const getLoginResponse = await client.get(LOGIN_PAGE_URL, { headers: { Accept: "text/html,*/*", "User-Agent": "Mozilla/5.0" } });
     const loginPageHtml = getLoginResponse.data;
 
     const cryptoParams = extractLoginCryptoParams(loginPageHtml);
     dynamicSalt = cryptoParams.salt;
     dynamicIv = cryptoParams.iv;
-    console.log(`Extracted Salt: ${dynamicSalt}, IV: ${dynamicIv}`);
+    logInfo(`Extracted Salt: ${dynamicSalt}, IV: ${dynamicIv}`);
 
     loginKey = sjclPbkdf2(routerPassword, dynamicSalt, PBKDF2_ITERATIONS, KEY_SIZE_BITS); // Use dynamic password
 
@@ -246,7 +272,7 @@ async function login() {
     const encryptedLoginData = sjclCCMEncrypt(loginKey, JSON.stringify(loginData), dynamicIv, AUTH_DATA, TAG_LENGTH_BITS);
     const payload = { EncryptedData: encryptedLoginData, user: routerUser.toLowerCase() }; // Use dynamic user
 
-    console.log(`Sending login credentials for user '${routerUser}' to ${LOGIN_ACTION_URL}...`);
+    logInfo(`Sending login credentials for user '${routerUser}' to ${LOGIN_ACTION_URL}...`);
     let putLoginResponse;
     try {
         putLoginResponse = await client.put(LOGIN_ACTION_URL, payload, {
@@ -254,9 +280,9 @@ async function login() {
         });
     } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 471) {
-             console.error("Login failed: Server responded with 471 (Decryption Failure).");
+             logError("Login failed: Server responded with 471 (Decryption Failure).");
         } else {
-            console.error("Initial login PUT request failed.");
+            logError("Initial login PUT request failed.");
         }
         throw error;
     }
@@ -264,17 +290,17 @@ async function login() {
     let csrfToken = putLoginResponse.headers["x-csrf-token"];
 
     if (!csrfToken) {
-      console.log("CSRF token missing. Checking for session takeover...");
+      logInfo("CSRF token missing. Checking for session takeover...");
       let decryptedResponseData;
       try {
         decryptedResponseData = JSON.parse(sjclCCMDecrypt(loginKey, putLoginResponse.data, dynamicIv, AUTH_DATA, TAG_LENGTH_BITS));
       } catch (e) {
-        console.error("Failed to decrypt/parse login response body:", e.message, "Raw data:", putLoginResponse.data);
+        logError("Failed to decrypt/parse login response body:", e.message, "Raw data:", putLoginResponse.data);
         throw new Error("Login failed: CSRF token missing and response body couldn't be processed.");
       }
 
       if (decryptedResponseData?.session_overtake === true) {
-        console.log("Session takeover required. Attempting...");
+        logInfo("Session takeover required. Attempting...");
         const takeoverPayload = { session_takeover: true };
         const encryptedTakeoverPayload = sjclCCMEncrypt(loginKey, JSON.stringify(takeoverPayload), dynamicIv, AUTH_DATA, TAG_LENGTH_BITS);
         const finalTakeoverPayload = { EncryptedData: encryptedTakeoverPayload, user: routerUser.toLowerCase() }; // Use dynamic user
@@ -285,49 +311,57 @@ async function login() {
 
         csrfToken = takeoverResponse.headers["x-csrf-token"];
         if (!csrfToken) throw new Error("Login failed: Session takeover attempted, but still no CSRF token.");
-        console.log("Session takeover successful.");
+        logInfo("Session takeover successful.");
       } else {
         throw new Error("Login failed: CSRF token missing and session takeover condition not met.");
       }
     }
 
-    console.log("Login successful (CSRF token obtained).");
+    logInfo("Login successful (CSRF token obtained).");
     // IMPORTANT: The global 'jar' has been updated by axios-cookiejar-support during the requests.
     // We return the key/iv/token, and the caller will save the *current* global jar state.
     return { csrfToken, derivedKey: loginKey, sessionIv: dynamicIv };
 
   } catch (error) {
-    console.error("Login process failed:");
+    logError("Login process failed:");
     if (axios.isAxiosError(error)) {
-      console.error(`Error Message: ${error.message}`);
-      if (error.response) console.error(`Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data)}`);
-      else if (error.request) console.error("No response received.");
-    } else console.error(`Error: ${error.message}`);
-    if (dynamicSalt && dynamicIv) console.error(`Attempted with Salt: ${dynamicSalt}, IV: ${dynamicIv}`);
+      logError(`Error Message: ${error.message}`);
+      if (error.response) logError(`Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data)}`);
+      else if (error.request) logError("No response received.");
+    } else logError(`Error: ${error.message}`);
+    if (dynamicSalt && dynamicIv) logError(`Attempted with Salt: ${dynamicSalt}, IV: ${dynamicIv}`);
     process.exit(1);
   }
 }
 
 async function fetchConnectedDevices(csrfToken) {
-  console.log(`Fetching connected devices from ${DEVICES_URL}...`);
+  logInfo(`Fetching connected devices from ${DEVICES_URL}...`);
   try {
     const response = await client.get(DEVICES_URL, {
       headers: { Accept: "*/*", "X-Requested-With": "XMLHttpRequest", "X-CSRF-Token": csrfToken, Referer: `${routerUrl}/connected_devices.php`, "User-Agent": "Mozilla/5.0" }, // Use dynamic URL for Referer
     });
     if (!response.data?.EncryptedData) throw new Error("EncryptedData not found in response body.");
-    console.log("Encrypted device data received.");
+    logInfo("Encrypted device data received.");
     return response.data.EncryptedData;
   } catch (error) {
-    console.error("Failed to fetch connected devices:");
-     if (axios.isAxiosError(error)) {
-        console.error(`Error Message: ${error.message}`);
-        if (error.response) console.error(`Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data)}`);
-        else if (error.request) console.error("No response received.");
-        // Re-throw specific error types if needed for cache invalidation
-        if (error.response?.status === 401 || error.response?.status === 403) {
-            error.isAuthError = true; // Mark error for cache handling
+    // Only log the error details if it's NOT an expected auth error in quiet mode
+    const isExpectedAuthError = axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403);
+    if (!isQuiet || !isExpectedAuthError) {
+        logError("Failed to fetch connected devices:");
+        if (axios.isAxiosError(error)) {
+            logError(`Error Message: ${error.message}`);
+            if (error.response) logError(`Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data)}`);
+            else if (error.request) logError("No response received.");
+        } else {
+            logError(`Error: ${error.message}`);
         }
-    } else console.error(`Error: ${error.message}`);
+    }
+
+    // Mark the error if it's an auth error, regardless of quiet mode
+    if (isExpectedAuthError) {
+        error.isAuthError = true; // Mark error for cache handling in main()
+    }
+
     throw error; // Re-throw the error to be handled in main()
   }
 }
@@ -343,7 +377,7 @@ async function main() {
   const cachedSession = await loadSessionCache();
 
   if (cachedSession) {
-    console.log("Attempting to use cached session...");
+    logInfo("Attempting to use cached session...");
     // IMPORTANT: Update the global jar instance used by the client
     jar = cachedSession.loadedJar;
     client.defaults.jar = jar; // Update the client's jar reference
@@ -354,16 +388,16 @@ async function main() {
       // If fetch succeeded, use cached data for decryption
       sessionData = cachedSession;
       needsLogin = false; // Login not needed
-      console.log("Cached session is valid.");
+      logInfo("Cached session is valid.");
     } catch (error) {
       // Check if the error indicates an invalid/expired session
       if (error.isAuthError || (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403))) {
-        console.log("Cached session is invalid or expired. Clearing cache and logging in again.");
+        logInfo("Cached session is invalid or expired. Clearing cache and logging in again.");
         await clearSessionCache();
         needsLogin = true; // Force login
       } else {
         // Different error occurred during fetch, log it and exit
-        console.error("An unexpected error occurred while using cached session:", error.message);
+        logError("An unexpected error occurred while using cached session:", error.message);
         process.exit(1);
       }
     }
@@ -382,30 +416,30 @@ async function main() {
   if (sessionData && encryptedDevicesData) {
     let decryptedText = null;
     try {
-      console.log("Decrypting device data...");
+      logInfo("Decrypting device data...");
       decryptedText = sjclCCMDecrypt(sessionData.derivedKey, encryptedDevicesData, sessionData.sessionIv, AUTH_DATA, TAG_LENGTH_BITS);
 
-      console.log("Parsing decrypted data...");
+      logInfo("Parsing decrypted data...");
       const connectedDevices = JSON.parse(decryptedText);
-      console.log("\nConnected Devices:");
-      console.log(JSON.stringify(connectedDevices, null, 2));
+      // Always log the final result to stdout
+      logResult(JSON.stringify(connectedDevices, null, 2));
     } catch (error) {
       // Handle decryption/parsing errors
       if (error instanceof sjcl.exception.corrupt) {
-        console.error("Decryption failed: Data corrupt or key/IV incorrect.");
-        if (sessionData.sessionIv) console.error(`Decryption attempted with IV: ${sessionData.sessionIv}`);
+        logError("Decryption failed: Data corrupt or key/IV incorrect.");
+        if (sessionData.sessionIv) logError(`Decryption attempted with IV: ${sessionData.sessionIv}`);
       } else if (error instanceof SyntaxError && error.message.includes("JSON")) {
-        console.error("Decryption likely succeeded, but result is not valid JSON.");
-        if (decryptedText !== null) console.error("Decrypted text (first 500 chars):", decryptedText.slice(0, 500) + (decryptedText.length > 500 ? "..." : ""));
+        logError("Decryption likely succeeded, but result is not valid JSON.");
+        if (decryptedText !== null) logError("Decrypted text (first 500 chars):", decryptedText.slice(0, 500) + (decryptedText.length > 500 ? "..." : ""));
       } else {
-        console.error("An error occurred during decryption/parsing:", error.message);
+        logError("An error occurred during decryption/parsing:", error.message);
       }
       // If login was successful but decryption failed, maybe clear cache?
       // await clearSessionCache(); // Optional: clear cache if decryption fails
       process.exit(1);
     }
   } else {
-      console.error("Could not obtain session data or device data. Exiting.");
+      logError("Could not obtain session data or device data. Exiting.");
       process.exit(1);
   }
 }

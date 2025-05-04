@@ -27,6 +27,7 @@ The script can be configured using a `.env` file in the project root, environmen
 | Username        | `--user`        | `ROUTER_USER`                     | `admin`                | The username for logging into the router.        |
 | Password        | `--pass`        | `ROUTER_PASS`                     | EMPTY         | The password for logging into the router.        |
 | Cache Directory | `--cache-dir`   | `SESSION_CACHE_DIR`               | `/app/cache` (Volume)  | Directory to store the `.session_cache.json`.    |
+| Quiet Mode      | `--quiet` / `-q`| N/A                               | `false`                | Suppress informational logs, output only JSON.   |
 
 **`.env` File:**
 
