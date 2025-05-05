@@ -26,6 +26,9 @@ jobs:
         secrets: |
           c82b4e64-e4b2-4853-9085-b2d301017484 > DOCKER_API_KEY
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
 
