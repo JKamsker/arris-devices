@@ -8,7 +8,7 @@ WORKDIR /app
 COPY src/package*.json ./
 
 # Install app dependencies
-RUN npm install --omit=dev
+RUN --mount=type=cache,target=/root/.npm npm install --omit=dev --platform=$BUILDPLATFORM
 
 # Copy the rest of the application code from src to /app
 COPY src/ .
